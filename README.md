@@ -1,17 +1,63 @@
-# flight_attendent
+# SkyAssist ✈️
 
-A new Flutter project.
+SkyAssist is a Flutter-based flight recovery application designed to help passengers manage travel disruptions seamlessly. Whether it's a flight cancellation or a delay, SkyAssist provides an intuitive flow to rebook flights, request refunds, or contact support.
 
-## Getting Started
+## 🚀 Features
 
-This project is a starting point for a Flutter application.
+- **Booking Lookup**: Quickly find your journey using PNR and Last Name.
+- **Disruption Management**: View real-time status of disrupted flights.
+- **Alternate Flight Rebooking**: Browse and select from available alternate flights.
+- **Fare Adjustment**: Automated calculation of fare differences with airport slip generation for manual collection.
+- **OTP Verification**: Secure transaction processing via multi-factor authentication.
+- **Refund & Support**: Integrated flow for requesting refunds or reaching out to airline support.
+- **Responsive UI**: Optimized for various screen sizes with robust overflow protection.
 
-A few resources to get you started if this is your first Flutter project:
+## 🛠 Tech Stack
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- **Framework**: [Flutter](https://flutter.dev/)
+- **State Management**: [Provider](https://pub.dev/packages/provider) (Strictly Provider-only architecture)
+- **API Communication**: HTTP with wrapped JSON response handling.
+- **Styling**: Custom `AppColors` system for brand consistency.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 🏗 Project Structure
+
+- `lib/providers/`: Contains `RecoveryProvider` for centralized state management.
+- `lib/services/`: `ApiService` for backend communication.
+- `lib/screens/`: UI implementation for the recovery flow (Lookup, Journey Status, OTP, Success, etc.).
+- `lib/models/`: Data models for Bookings and Flight Segments.
+- `lib/constants/`: API endpoints, color palettes, and string constants.
+
+## 🚦 Getting Started
+
+### Prerequisites
+
+- Flutter SDK (Latest Stable)
+- Android Studio / VS Code
+- An active backend API for flight data
+
+### Installation
+
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/JoshiNandan/SkyAssist_Frontend.git
+    ```
+2.  **Navigate to project directory**:
+    ```bash
+    cd flight_attendent
+    ```
+3.  **Install dependencies**:
+    ```bash
+    flutter pub get
+    ```
+4.  **Run the application**:
+    ```bash
+    flutter run
+    ```
+
+## 📱 Screenshots
+
+*(Add screenshots here after running the app)*
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
