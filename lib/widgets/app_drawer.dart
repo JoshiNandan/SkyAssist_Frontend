@@ -1,13 +1,18 @@
 // lib/widgets/app_drawer.dart
 import 'package:flutter/material.dart';
-import '../constants/app_strings.dart';
 import '../constants/app_colors.dart';
+import '../constants/app_strings.dart';
+import '../screens/about_screen.dart';
+import '../screens/booking_lookup_screen.dart';
+import '../screens/generated_slips_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final currentRoute = ModalRoute.of(context)?.settings.name;
+
     return Drawer(
       backgroundColor: AppColors.card,
       child: ListView(
@@ -28,11 +33,7 @@ class AppDrawer extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
-                    Icons.flight,
-                    color: Colors.white,
-                    size: 24,
-                  ),
+                  child: const Icon(Icons.flight, color: Colors.white, size: 24),
                 ),
                 const SizedBox(height: 14),
                 const Text(
@@ -57,32 +58,72 @@ class AppDrawer extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          _buildDrawerItem(
+
+          _DrawerItem(
             icon: Icons.search_rounded,
             label: 'Booking Lookup',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const BookingLookupScreen()),
+                (route) => false,
+              );
+            },
           ),
-          _buildDrawerItem(
-            icon: Icons.flight_takeoff_rounded,
-            label: 'Journey Status',
-          ),
+
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Divider(
               color: AppColors.softSage.withValues(alpha: 0.3),
-              height: 24,
+              height: 20,
             ),
           ),
-          _buildDrawerItem(
-            icon: Icons.lock_outline_rounded,
-            label: 'Future OTP‑secured flow',
+
+          _DrawerItem(
+            icon: Icons.folder_copy_outlined,
+            label: 'Generated Slips',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GeneratedSlipsScreen()),
+              );
+            },
           ),
+
+          _DrawerItem(
+            icon: Icons.info_outline_rounded,
+            label: 'About',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AboutScreen()),
+              );
+            },
+          ),
+
           const SizedBox(height: 8),
         ],
       ),
     );
   }
+}
 
-  Widget _buildDrawerItem({required IconData icon, required String label}) {
+class _DrawerItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _DrawerItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: ListTile(
@@ -95,11 +136,10 @@ class AppDrawer extends StatelessWidget {
             color: AppColors.text,
           ),
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         dense: true,
         visualDensity: const VisualDensity(vertical: 0),
+        onTap: onTap,
       ),
     );
   }

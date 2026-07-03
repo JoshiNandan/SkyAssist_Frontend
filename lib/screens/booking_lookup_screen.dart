@@ -1,5 +1,6 @@
 // lib/screens/booking_lookup_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/recovery_provider.dart';
 import '../widgets/app_drawer.dart';
@@ -19,6 +20,7 @@ class BookingLookupScreen extends StatefulWidget {
 class _BookingLookupScreenState extends State<BookingLookupScreen> {
   final _pnrController = TextEditingController();
   final _lastNameController = TextEditingController();
+  DateTime? _lastBackPress;
 
   @override
   void dispose() {
@@ -87,17 +89,36 @@ class _BookingLookupScreenState extends State<BookingLookupScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<RecoveryProvider>();
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        title: const Text(AppStrings.appTitle),
-        elevation: 0,
-      ),
-      drawer: const AppDrawer(),
-      backgroundColor: AppColors.background,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: Column(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        final now = DateTime.now();
+        final isSecondPress = _lastBackPress != null &&
+            now.difference(_lastBackPress!) < const Duration(seconds: 2);
+        if (isSecondPress) {
+          SystemNavigator.pop();
+        } else {
+          _lastBackPress = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Press back again to exit'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: AppColors.primary,
+          title: const Text(AppStrings.appTitle),
+          elevation: 0,
+        ),
+        drawer: const AppDrawer(),
+        backgroundColor: AppColors.background,
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Page title
@@ -244,6 +265,7 @@ class _BookingLookupScreenState extends State<BookingLookupScreen> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }

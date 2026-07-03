@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../constants/app_colors.dart';
+import '../models/recovery_slip_model.dart';
 import '../providers/recovery_provider.dart';
 import 'booking_lookup_screen.dart';
 import 'fare_adjustment_slip_screen.dart';
+import 'slip_details_screen.dart';
 
 class RecoverySuccessScreen extends StatelessWidget {
   const RecoverySuccessScreen({super.key});
@@ -20,20 +22,32 @@ class RecoverySuccessScreen extends StatelessWidget {
         action == 'REBOOK' &&
         provider.recoveryStatus == 'PENDING_FARE_ADJUSTMENT';
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: isPendingFareAdjustment
-              ? SingleChildScrollView(
-                  child: _buildPendingFareAdjustmentBody(
-                    context,
-                    provider,
-                    result,
-                  ),
-                )
-              : _buildDefaultSuccessBody(context, provider, result, action),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        provider.clearRecoveryFlow();
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const BookingLookupScreen()),
+          (route) => false,
+        );
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: isPendingFareAdjustment
+                ? SingleChildScrollView(
+                    child: _buildPendingFareAdjustmentBody(
+                      context,
+                      provider,
+                      result,
+                    ),
+                  )
+                : _buildDefaultSuccessBody(context, provider, result, action),
+          ),
         ),
       ),
     );
@@ -83,6 +97,18 @@ class RecoverySuccessScreen extends StatelessWidget {
         if (hasSlip && requestId != null && requestId.isNotEmpty) ...[
           const SizedBox(height: 8),
           _buildRequestReference(requestId),
+        ],
+
+        // Newly saved slip — View Generated Slip button
+        if (provider.lastSavedSlip != null) ...[
+          const SizedBox(height: 12),
+          _buildViewGeneratedSlipButton(context, provider.lastSavedSlip!),
+        ],
+
+        // Duplicate slip notice
+        if (provider.duplicateSlip != null) ...[
+          const SizedBox(height: 12),
+          _buildDuplicateNotice(context, provider),
         ],
 
         // Rebook: View Slip button
@@ -160,6 +186,80 @@ class RecoverySuccessScreen extends StatelessWidget {
         const Spacer(),
         _buildBackToHomeButton(context, provider),
       ],
+    );
+  }
+
+  Widget _buildViewGeneratedSlipButton(
+    BuildContext context,
+    RecoverySlipModel slip,
+  ) {
+    return SizedBox(
+      width: double.infinity,
+      height: 44,
+      child: OutlinedButton.icon(
+        icon: const Icon(Icons.folder_copy_outlined, size: 18),
+        label: const Text('View Generated Slip', style: TextStyle(fontSize: 14)),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          side: const BorderSide(color: AppColors.primary),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => SlipDetailsScreen(slip: slip)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDuplicateNotice(BuildContext context, RecoveryProvider provider) {
+    final dup = provider.duplicateSlip!;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.info_outline, color: AppColors.warning, size: 18),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'A recovery slip has already been generated for this booking.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.warning,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            height: 40,
+            child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.warning,
+                side: const BorderSide(color: AppColors.warning),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => SlipDetailsScreen(slip: dup)),
+              ),
+              child: const Text('View Existing Slip', style: TextStyle(fontSize: 13)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

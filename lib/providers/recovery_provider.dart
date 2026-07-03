@@ -4,8 +4,10 @@ import 'package:flutter/foundation.dart';
 import '../models/alternate_flight_model.dart';
 import '../models/booking_model.dart';
 import '../models/recent_search_model.dart';
+import '../models/recovery_slip_model.dart';
 import '../services/api_service.dart';
 import '../services/local_storage_service.dart';
+import '../services/slip_storage_service.dart';
 
 class RecoveryProvider extends ChangeNotifier {
   final ApiService _api = ApiService();
@@ -38,6 +40,11 @@ class RecoveryProvider extends ChangeNotifier {
   // Refund / Support slip state
   Map<String, dynamic>? recoverySlip;
 
+  // Slip persistence state
+  final SlipStorageService _slipStorage = SlipStorageService();
+  RecoverySlipModel? lastSavedSlip;
+  RecoverySlipModel? duplicateSlip; // non-null when a duplicate was detected
+
   void setPendingAction(String action) {
     pendingAction = action;
     notifyListeners();
@@ -69,6 +76,8 @@ class RecoveryProvider extends ChangeNotifier {
     newFare = null;
     fareAdjustmentSlip = null;
     recoverySlip = null;
+    lastSavedSlip = null;
+    duplicateSlip = null;
     notifyListeners();
   }
 
@@ -179,6 +188,10 @@ class RecoveryProvider extends ChangeNotifier {
           pendingAction == "SUPPORT") {
         recoverySlip = response['slip'] as Map<String, dynamic>?;
       }
+
+      // Persist slip locally
+      await _persistSlipFromResponse(response);
+
       isLoading = false;
       notifyListeners();
       return true;
@@ -188,6 +201,84 @@ class RecoveryProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  Future<void> _persistSlipFromResponse(Map<String, dynamic> response) async {
+    if (currentBooking == null) return;
+    final booking = currentBooking!;
+
+    // Resolve the slip object from the response
+    final rawSlip = (response['slip'] as Map<String, dynamic>?) ??
+        (pendingAction == 'REBOOK' &&
+                recoveryStatus == 'PENDING_FARE_ADJUSTMENT'
+            ? fareAdjustmentSlip
+            : null);
+    if (rawSlip == null) return;
+
+    // ── Strict validation: all core fields must be present and non-empty ──
+    final slipId = rawSlip['requestId'] as String?;
+    final bookingId = booking.bookingId;
+    final pnr = booking.pnr;
+    final passengerName = booking.passengerName;
+    final seg = booking.segments.isNotEmpty ? booking.segments.first : null;
+    final flightNumber = seg?.flightNumber ?? '';
+    final from = seg?.origin ?? '';
+    final to = seg?.destination ?? '';
+    final journeyDate = booking.travelDate;
+    final recoveryType = (rawSlip['type'] as String?) ?? pendingAction ?? '';
+
+    if (bookingId.isEmpty ||
+        pnr.isEmpty ||
+        passengerName.isEmpty ||
+        flightNumber.isEmpty ||
+        from.isEmpty ||
+        to.isEmpty ||
+        journeyDate.isEmpty ||
+        recoveryType.isEmpty) {
+      return; // incomplete data — do not persist a broken slip
+    }
+
+    final altFlight =
+        (rawSlip['selectedFlight'] as Map<String, dynamic>?) ??
+        (recoveryResult?['selectedFlight'] as Map<String, dynamic>?);
+
+    final slip = RecoverySlipModel(
+      slipId: (slipId != null && slipId.isNotEmpty)
+          ? slipId
+          : 'SLP-${DateTime.now().millisecondsSinceEpoch}',
+      bookingId: bookingId,
+      pnr: pnr,
+      passengerName: passengerName,
+      flightNumber: flightNumber,
+      from: from,
+      to: to,
+      journeyDate: journeyDate,
+      recoveryType: recoveryType,
+      status: _resolveSlipStatus(rawSlip['status'] as String?),
+      generatedAt: rawSlip['generatedAt'] as String? ?? DateTime.now().toIso8601String(),
+      alternateFlightId: altFlight?['flightId']?.toString(),
+      alternateFlightNumber: altFlight?['flightNumber']?.toString(),
+      alternateDeparture: altFlight?['departureTime']?.toString(),
+      alternateArrival: altFlight?['arrivalTime']?.toString(),
+      instruction: rawSlip['instruction'] as String?,
+    );
+
+    final duplicate = await _slipStorage.saveSlip(slip);
+    if (duplicate != null) {
+      duplicateSlip = duplicate;
+    } else {
+      lastSavedSlip = slip;
+      duplicateSlip = null;
+    }
+  }
+
+  /// Maps a raw backend status to a guaranteed non-empty display status.
+  /// PENDING_FARE_ADJUSTMENT keeps its own label; everything else that is
+  /// blank or unrecognised falls back to CONFIRMED.
+  String _resolveSlipStatus(String? raw) {
+    if (raw != null && raw.isNotEmpty) return raw;
+    if (recoveryStatus == 'PENDING_FARE_ADJUSTMENT') return 'PENDING_FARE_ADJUSTMENT';
+    return 'CONFIRMED';
   }
 
   Future<void> loadRecentSearches() async {
