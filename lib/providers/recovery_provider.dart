@@ -199,18 +199,33 @@ class RecoveryProvider extends ChangeNotifier {
     isLoading = true;
     errorMessage = null;
     notifyListeners();
+
     try {
       final booking = await _api.lookupBooking(pnr, lastName);
       currentBooking = booking;
+
       await _storage.saveRecentSearch(
         RecentSearchModel(pnr: pnr, lastName: lastName),
       );
       await loadRecentSearches();
+
       isLoading = false;
       notifyListeners();
       return true;
     } on BookingNotFoundException {
       errorMessage = 'No booking found for the entered PNR and last name.';
+      isLoading = false;
+      notifyListeners();
+      return false;
+    } on ApiTimeoutException {
+      errorMessage =
+          'The server is taking longer than expected to respond. Please wait a moment and try again.';
+      isLoading = false;
+      notifyListeners();
+      return false;
+    } on ApiNetworkException {
+      errorMessage =
+          'Unable to reach SkyAssist services. Please check your internet connection and try again.';
       isLoading = false;
       notifyListeners();
       return false;
